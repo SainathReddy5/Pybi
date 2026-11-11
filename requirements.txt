@@ -1,0 +1,13 @@
+# UI & visualisation
+panel>=1.4.0
+plotly>=5.18.0
+hvplot>=0.9.0
+
+# Data processing
+pandas>=2.1.0
+
+# Database connectivity — single driver for all targets
+pyodbc>=5.0.0
+
+# Password encryption
+cryptography>=41.0.0

@@ -1,0 +1,53 @@
+services:
+
+  # ── PyBI application ─────────────────────────────────────────────────────────
+  pybi:
+    build: .
+    ports:
+      - "5006:5006"
+    environment:
+      # Metadata Postgres connection (points at the 'postgres' service below)
+      PYBI_META_HOST:     postgres
+      PYBI_META_PORT:     "5432"
+      PYBI_META_DATABASE: pybi
+      PYBI_META_USER:     pybi
+      PYBI_META_PASSWORD: pybi
+
+      # ODBC driver name for the metadata Postgres (matches what odbc-postgresql installs)
+      PYBI_PG_DRIVER: "PostgreSQL Unicode"
+
+      # Fernet key — keep this constant so saved passwords survive restarts.
+      # Generate with: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+      PYBI_FERNET_KEY: "VjoZmKCDL069ofgZAYfpUAd86TgeC7tONncfvhd_ZhI="
+
+      # Override ODBC driver names if your installation differs
+      # PYBI_MSSQL_ODBC_DRIVER:  "ODBC Driver 17 for SQL Server"
+      # PYBI_MYSQL_ODBC_DRIVER:  "MySQL ODBC 8.0 Unicode Driver"
+    volumes:
+      - ./.key:/app/.key          # persist the Fernet key file across rebuilds
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ── Metadata + test Postgres ──────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB:       pybi
+      POSTGRES_USER:     pybi
+      POSTGRES_PASSWORD: pybi
+    ports:
+      - "5432:5432"               # expose so you can connect from host tools too
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro  # loads sample data on first start
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pybi -d pybi"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  pg_data:
